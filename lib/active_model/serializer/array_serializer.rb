@@ -10,7 +10,7 @@ module ActiveModel
             :serializer,
             ActiveModel::Serializer.serializer_for(object)
           )
-          serializer_class.new(object)
+          serializer_class.new(object, options)
         end
       end
 
