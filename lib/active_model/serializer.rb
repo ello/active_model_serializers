@@ -137,9 +137,9 @@ module ActiveModel
 
     def each_association(&block)
       self.class._associations.dup.each do |name, options|
-        association = object.send(name)
         serializer_class = ActiveModel::Serializer.serializer_for(association)
         serializer = serializer_class.new(association, options[:options]) if serializer_class
+        association = send(name)
 
         if block_given?
           block.call(name, serializer, options[:options])
