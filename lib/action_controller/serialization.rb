@@ -19,6 +19,10 @@ module ActionController
       @_serializer
     end
 
+    def default_serializer_options
+      {}
+    end
+
     def use_adapter?
       !(@_adapter_opts.key?(:adapter) && !@_adapter_opts[:adapter])
     end
@@ -27,6 +31,7 @@ module ActionController
       define_method renderer_method do |resource, options|
         @_adapter_opts, @_serializer_opts =
           options.partition { |k, _| ADAPTER_OPTION_KEYS.include? k }.map { |h| Hash[h] }
+        @_serializer_opts = default_serializer_options.merge(@_serializer_opts)
 
         if use_adapter? && (serializer = get_serializer(resource))
           # omg hax
