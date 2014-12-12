@@ -11,10 +11,10 @@ module ActiveModel
             serializer.each_association do |name, association, opts|
               if association.respond_to?(:each)
                 array_serializer = association
-                @result[name] = array_serializer.map { |item| item.attributes(opts) }
+                @result[name] = array_serializer.map { |s| self.class.new(s).serializable_hash }
               else
                 if association
-                  @result[name] = association.attributes(options)
+                  @result[name] = self.class.new(association).serializable_hash
                 else
                   @result[name] = nil
                 end
