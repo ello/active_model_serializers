@@ -118,6 +118,11 @@ module ActiveModel
 
         def serialized_object_type(serializer)
           return false unless Array(serializer).first
+
+          if Array(serializer).first.respond_to?(:serialized_object_type)
+            return Array(serializer).first.serialized_object_type
+          end
+
           type_name = Array(serializer).first.object.class.to_s.underscore
           if serializer.respond_to?(:first)
             type_name.pluralize
