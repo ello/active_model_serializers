@@ -48,13 +48,13 @@ module ActiveModel
 
           if serializer
             type = serialized_object_type(serializer)
-            if name.to_s == type || !type
-              resource[:links][name] = serializer.id.to_s
-            else
-              resource[:links][name] ||= {}
-              resource[:links][name][:type] = type
-              resource[:links][name][:id] = serializer.id.to_s
-            end
+            id = serializer.id.to_s
+            href = serializer.href
+
+            resource[:links][name] ||= {}
+            resource[:links][name][:type] = type unless name.to_s == type || !type
+            resource[:links][name][:href] = href unless href.nil?
+            resource[:links][name][:id] = id
           end
         end
 
