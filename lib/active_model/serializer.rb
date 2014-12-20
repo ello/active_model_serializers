@@ -10,30 +10,53 @@ module ActiveModel
       attr_accessor :_attributes
       attr_accessor :_associations
       attr_accessor :_urls
+      attr_accessor :_href
     end
 
     def self.inherited(base)
-      base._attributes = []
+      base._attributes = {}
       base._associations = {}
       base._urls = []
+      base._href = nil
+    end
+
+    def self.inherit_attributes
+      @_attributes = superclass._attributes.dup
+    end
+
+    def self.inherit_associations
+      @_associations = superclass._associations.dup
+    end
+
+    def self.group(name, &block)
+      raise ArgumentError, 'Expected block' unless block_given?
+      with_options group: name do |instance|
+        instance.instance_eval(&block)
+      end
     end
 
     def self.attributes(*attrs)
-      @_attributes.concat attrs
-
-      attrs.each do |attr|
-        define_method attr do
-          object.read_attribute_for_serialization(attr)
-        end unless method_defined?(attr)
-      end
+      options = attrs.extract_options!
+      attrs.each { |attr| attribute(attr, options) }
     end
 
     def self.attribute(attr, options = {})
       key = options.fetch(:key, attr)
-      @_attributes.concat [key]
+      @_attributes ||= {}
+      @_attributes[key] = { options: options }
+
       define_method key do
         object.read_attribute_for_serialization(attr)
       end unless method_defined?(key)
+    end
+
+    def self.href(&block)
+      raise ArgumentError, 'Expected block' unless block_given?
+      @_href = block
+    end
+
+    def serialized_object_type
+      self.class.root_name.to_s.pluralize
     end
 
     # Defines an association in the object that should be rendered.
@@ -118,7 +141,13 @@ module ActiveModel
 
     def initialize(object, options = {})
       @object = object
-      @root   = options[:root] || (self.class._root ? self.class.root_name : false)
+      @options = options.dup
+      @root = options[:root] || (self.class._root ? self.class.root_name : false)
+
+      @including = @options.delete(:including) || []
+      @excluding = @options.delete(:excluding) || []
+      @include = @options.delete(:include) || []
+      @exclude = @options.delete(:exclude) || []
     end
 
     def json_key
@@ -129,14 +158,32 @@ module ActiveModel
       end
     end
 
-    def attributes(options = {})
-      self.class._attributes.dup.each_with_object({}) do |name, hash|
+    def attributes(_options = {})
+      hash = {}
+      self.class._attributes.each do |name, options|
+        next unless include_in_serialization?(name, options[:options])
         hash[name] = send(name)
       end
+      hash
+    end
+
+    def href
+      return nil unless self.class._href.respond_to?(:call)
+      instance_eval(&self.class._href)
+    end
+
+    def associations(_options = {})
+      hash = {}
+      self.class._associations.each do |name, options|
+        next unless include_in_serialization?(name, options[:options])
+        hash[name] = options[:options]
+      end
+      hash
     end
 
     def each_association(&block)
-      self.class._associations.dup.each do |name, options|
+      self.class._associations.each do |name, options|
+        next unless include_in_serialization?(name, options[:options])
         association_options = options[:options].dup
         association = send(name)
 
@@ -144,14 +191,45 @@ module ActiveModel
         serializer_class ||= ActiveModel::Serializer.serializer_for(association)
 
         association_options[:serializer] = association_options.delete(:each_serializer)
-        association_options = (@options || {}).merge(association_options)
+        association_options = @options.dup.merge(association_options)
 
         serializer = serializer_class.new(association, association_options) if serializer_class
 
-        if block_given?
-          block.call(name, serializer, association_options)
-        end
+        block.call(name, serializer, association_options) if block_given?
       end
+    end
+
+    protected
+
+    def include_in_serialization?(attr, options)
+      ret = true
+      if options[:group]
+        ret = false
+        ret = true unless @excluding.empty?
+        ret = true if has_included_group?(options[:group])
+        return false if has_excluded_group?(options[:group])
+      end
+      ret = true if has_included_attr?(attr)
+      ret = false if has_excluded_attr?(attr)
+      # let the serializer finally decide
+      return ret && send("include_#{attr}?") if respond_to?("include_#{attr}?")
+      ret
+    end
+
+    def has_excluded_group?(group)
+      @excluding.include?(group)
+    end
+
+    def has_included_group?(group)
+      @including.include?(group)
+    end
+
+    def has_excluded_attr?(name)
+      @exclude.include?(name)
+    end
+
+    def has_included_attr?(name)
+      @include.include?(name) || @include.include?(:all)
     end
 
     private
