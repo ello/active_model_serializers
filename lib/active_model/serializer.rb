@@ -81,16 +81,14 @@ module ActiveModel
 
     def self.associate(type, attrs) #:nodoc:
       options = attrs.extract_options!
-      self._associations = _associations.dup
 
       attrs.each do |attr|
-        unless method_defined?(attr)
-          define_method attr do
-            object.send attr
-          end
-        end
+        @_associations[attr] = { type: type, options: options }
+        key = options.fetch(:as, attr)
 
-        self._associations[attr] = {type: type, options: options}
+        define_method key do
+          object.send(key)
+        end unless method_defined?(key)
       end
     end
 
@@ -176,7 +174,7 @@ module ActiveModel
       hash = {}
       self.class._associations.each do |name, options|
         next unless include_in_serialization?(name, options[:options])
-        hash[name] = options[:options]
+        hash[options[:options].fetch(:as, name)] = options[:options]
       end
       hash
     end
@@ -185,7 +183,8 @@ module ActiveModel
       self.class._associations.each do |name, options|
         next unless include_in_serialization?(name, options[:options])
         association_options = options[:options].dup
-        association = send(name)
+        key = association_options.fetch(:as, name)
+        association = send(key)
 
         serializer_class = association_options.delete(:serializer)
         serializer_class ||= ActiveModel::Serializer.serializer_for(association)
@@ -195,7 +194,7 @@ module ActiveModel
 
         serializer = serializer_class.new(association, association_options) if serializer_class
 
-        block.call(name, serializer, association_options) if block_given?
+        block.call(key, serializer, association_options) if block_given?
       end
     end
 
