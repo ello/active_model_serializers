@@ -185,6 +185,7 @@ module ActiveModel
         association_options = options[:options].dup
         key = association_options.fetch(:as, name)
         association = send(key)
+        next unless association
 
         serializer_class = association_options.delete(:serializer)
         serializer_class ||= ActiveModel::Serializer.serializer_for(association)
