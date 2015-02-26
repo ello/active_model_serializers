@@ -212,7 +212,7 @@ module ActiveModel
       ret = true if has_included_attr?(attr)
       ret = false if has_excluded_attr?(attr)
       # let the serializer finally decide
-      return ret && send("include_#{attr}?") if respond_to?("include_#{attr}?")
+      return ret && send("include_#{attr}?") if respond_to?("include_#{attr}?", true)
       ret
     end
 
