@@ -191,6 +191,8 @@ module ActiveModel
         serializer_class ||= ActiveModel::Serializer.serializer_for(association)
 
         association_options[:serializer] = association_options.delete(:each_serializer)
+        association_options[:parent] = self
+        association_options[:association_name] = name
         association_options = @options.dup.merge(association_options)
 
         serializer = serializer_class.new(association, association_options) if serializer_class
