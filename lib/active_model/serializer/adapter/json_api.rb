@@ -14,7 +14,7 @@ module ActiveModel
 
           if serializer.respond_to?(:each)
             @hash[@root] = serializer.map do |s|
-              self.class.new(s, @options.merge(top: @top)).serializable_hash[@root]
+              self.class.new(s, @options.merge(top: @top)).serializable_hash(options)[@root]
             end
           else
             @hash[@root] = attributes_for_serializer(serializer, @options)
