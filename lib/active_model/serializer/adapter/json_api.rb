@@ -75,7 +75,11 @@ module ActiveModel
 
               add_resource_links(attrs, serializer, add_linked: false)
 
-              @top[:linked][plural_name].push(attrs) unless @top[:linked][plural_name].include?(attrs)
+              if attrs_already_present_by_id?(attrs, plural_name)
+                merge_attributes(attrs, plural_name)
+              else
+                @top[:linked][plural_name].push(attrs) unless @top[:linked][plural_name].include?(attrs)
+              end
             end
           end
 
@@ -84,6 +88,24 @@ module ActiveModel
               add_linked(name, association, resource_path) if association
             end if include_nested_assoc? resource_path
           end
+        end
+
+        def attrs_already_present_by_id?(attrs, plural_name)
+          find_existing_attrs_based_on(attrs, plural_name).present?
+        end
+
+        def find_existing_attrs_based_on(attrs, plural_name)
+          id = get_id(attrs)
+          @top[:linked][plural_name].find { |existing| get_id(existing) == id }
+        end
+
+        def get_id(attrs)
+          attrs[:id] || attrs['id']
+        end
+
+        def merge_attributes(attrs, plural_name)
+          existing_attrs = find_existing_attrs_based_on(attrs, plural_name)
+          existing_attrs.deep_merge!(attrs)
         end
 
         def attributes_for_serializer(serializer, options)
