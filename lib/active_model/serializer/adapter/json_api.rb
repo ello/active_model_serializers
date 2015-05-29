@@ -73,7 +73,7 @@ module ActiveModel
             serializers.each do |serializer|
               attrs = attributes_for_serializer(serializer, @options)
 
-              add_resource_links(attrs, serializer, add_linked: false)
+              add_resource_links(attrs, serializer, add_linked: true)
 
               if attrs_already_present_by_id?(attrs, plural_name)
                 merge_attributes(attrs, plural_name)
