@@ -187,8 +187,9 @@ module ActiveModel
         association = send(key)
         next unless association
 
-        serializer_class = association_options.delete(:serializer)
-        serializer_class ||= ActiveModel::Serializer.serializer_for(association)
+        serializer_class = association_options.delete(:serializer) do
+          ActiveModel::Serializer.serializer_for(association)
+        end
 
         association_options[:serializer] = association_options.delete(:each_serializer)
         association_options[:parent] = self

@@ -6,10 +6,9 @@ module ActiveModel
 
       def initialize(objects, options = {})
         @objects = objects.map do |object|
-          serializer_class = options.fetch(
-            :serializer,
+          serializer_class = options.fetch(:serializer) do
             ActiveModel::Serializer.serializer_for(object)
-          )
+          end
           serializer_class.new(object, options)
         end
       end
